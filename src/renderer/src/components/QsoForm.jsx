@@ -454,9 +454,8 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
             size="small"
           />
         </Grid>
-        <Grid item xs={6} sm={4} md={3}>
+        <Grid item xs="auto">
           <TextField
-            fullWidth
             label="Grid Locator"
             name="gridLocator"
             value={qso.gridLocator}
@@ -464,30 +463,82 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
             autoComplete="off"
             margin="normal"
             size="small"
+            sx={{
+              '& .MuiInputBase-root': {
+                width: '8.5rem', // Ancho fijo para 6 caracteres
+              },
+            }}
+            inputProps={{
+              maxLength: 6,
+              style: {
+                fontFamily: 'monospace',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                textAlign: 'center',
+                padding: '8.5px 4px',
+                width: '100%',
+              },
+            }}
           />
         </Grid>
-        <Grid item xs={3} sm={3} md={3}>
+        <Grid item xs="auto" sx={{ minWidth: '60px' }}>
           <TextField
-            fullWidth
-            label="Zona CQ"
+            label="CQ"
             name="cqZone"
             value={qso.cqZone}
             onChange={handleChange}
             autoComplete="off"
             margin="normal"
             size="small"
+            inputProps={{
+              maxLength: 2,
+              style: {
+                textAlign: 'center',
+                padding: '8.5px 4px',
+                width: '60px',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+              },
+            }}
+            sx={{
+              '& .MuiInputBase-root': {
+                width: '100%',
+              },
+              '& .MuiInputBase-input': {
+                textAlign: 'center',
+                padding: '8.5px 4px',
+              },
+            }}
           />
         </Grid>
-        <Grid item xs={3} sm={3} md={3}>
+        <Grid item xs="auto" sx={{ minWidth: '80px' }}>
           <TextField
-            fullWidth
-            label="Zona ITU"
+            label="ITU"
             name="ituZone"
             value={qso.ituZone}
             onChange={handleChange}
             autoComplete="off"
             margin="normal"
             size="small"
+            inputProps={{
+              maxLength: 2,
+              style: {
+                textAlign: 'center',
+                padding: '8.5px 4px',
+                width: '60px',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+              },
+            }}
+            sx={{
+              '& .MuiInputBase-root': {
+                width: '100%',
+              },
+              '& .MuiInputBase-input': {
+                textAlign: 'center',
+                padding: '8.5px 4px',
+              },
+            }}
           />
         </Grid>
       </Grid>
