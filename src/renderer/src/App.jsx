@@ -6,6 +6,7 @@ import QsoTable from './components/QsoTable';
 import QsoForm from './components/QsoForm';
 import AboutDialog from './components/AboutDialog';
 import SettingsDialog from './components/SettingsDialog';
+import WelcomeDialog from './components/WelcomeDialog';
 
 const darkTheme = createTheme({
   palette: {
@@ -26,6 +27,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   useEffect(() => {
     // Load settings when component mounts
@@ -34,6 +36,12 @@ function App() {
         const savedSettings = await window.electron.ipcRenderer.invoke('load-settings');
         if (savedSettings) {
           setSettings(savedSettings);
+          // Check if settings are empty (new installation)
+          const isEmpty = !savedSettings.callsign && !savedSettings.operatorName;
+          setShowWelcomeModal(isEmpty);
+        } else {
+          // No settings found, show welcome modal
+          setShowWelcomeModal(true);
         }
       } catch (error) {
         console.error('Error loading settings:', error);
@@ -42,6 +50,8 @@ function App() {
           message: 'Error al cargar la configuración',
           severity: 'error',
         });
+        // If there's an error, still show the welcome modal
+        setShowWelcomeModal(true);
       }
     };
 
@@ -76,6 +86,8 @@ function App() {
         message: 'Configuración guardada correctamente',
         severity: 'success',
       });
+      // Close the welcome modal if it's open
+      setShowWelcomeModal(false);
     } catch (error) {
       console.error('Error saving settings:', error);
       setSnackbar({
@@ -149,6 +161,16 @@ function App() {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* Welcome/Configuration Modal */}
+        <WelcomeDialog
+          open={showWelcomeModal}
+          onClose={() => setShowWelcomeModal(false)}
+          onConfigure={() => {
+            setShowWelcomeModal(false);
+            setSettingsOpen(true);
+          }}
+        />
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
