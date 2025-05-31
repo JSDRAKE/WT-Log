@@ -73,7 +73,7 @@ function App() {
           }}
         >
           <Typography variant="subtitle1" component="div">
-            WT-Log - Libro de Guardia LU9WT
+            WT-Log - Libro de Guardia
           </Typography>
         </Box>
         <AboutDialog open={aboutOpen} onClose={handleAboutClose} />
