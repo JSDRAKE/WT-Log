@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, Container, Paper, Grid, Typography, Snackbar, Alert } from '@mui/material';
+import { Box, Container, Paper, Grid, Typography, Snackbar, Alert, IconButton } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import QsoTable from './components/QsoTable';
 import QsoForm from './components/QsoForm';
 import AboutDialog from './components/AboutDialog';
@@ -153,11 +154,34 @@ function App() {
         />
         <Snackbar
           open={snackbar.open}
-          autoHideDuration={6000}
+          autoHideDuration={5000}
           onClose={handleCloseSnackbar}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          sx={{ '& .MuiAlert-action': { paddingLeft: 0 } }}
         >
-          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{
+              width: '100%',
+              '& .MuiAlert-message': {
+                display: 'flex',
+                alignItems: 'center',
+                flexGrow: 1,
+              },
+            }}
+            action={
+              <IconButton
+                size="small"
+                aria-label="close"
+                color="inherit"
+                onClick={handleCloseSnackbar}
+                sx={{ p: 0.5, ml: 1 }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            }
+          >
             {snackbar.message}
           </Alert>
         </Snackbar>
