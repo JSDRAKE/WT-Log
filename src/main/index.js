@@ -75,7 +75,72 @@ app.whenReady().then(() => {
     // File menu
     {
       label: 'Archivo',
-      submenu: [isMac ? { role: 'close' } : { role: 'quit' }],
+      submenu: [
+        {
+          label: 'Nuevo Log',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('menu-action', 'new-log');
+            }
+          },
+        },
+        {
+          label: 'Cargar Log',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('menu-action', 'load-log');
+            }
+          },
+        },
+        {
+          label: 'Borrar Log',
+          accelerator: 'CmdOrCtrl+Shift+D',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('menu-action', 'delete-log');
+            }
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'Importar ADIF',
+          accelerator: 'CmdOrCtrl+I',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('menu-action', 'import-adif');
+            }
+          },
+        },
+        {
+          label: 'Exportar ADIF',
+          accelerator: 'CmdOrCtrl+E',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('menu-action', 'export-adif');
+            }
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'Configuración',
+          accelerator: 'CmdOrCtrl+,',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('menu-action', 'open-settings');
+            }
+          },
+        },
+        { type: 'separator' },
+        isMac ? { role: 'close' } : { role: 'quit' },
+      ],
     },
     // Edit menu
     {
