@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Button,
@@ -12,7 +11,12 @@ import {
   InputLabel,
   FormControl,
   Select,
+  Typography,
+  Divider,
+  useTheme,
+  IconButton,
 } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 
 // Import country data from external file
 import { countryData } from '../data/countries';
@@ -228,11 +232,67 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
     }
   };
 
+  const theme = useTheme();
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Configuración de la Estación</DialogTitle>
-      <DialogContent dividers>
-        <Box sx={{ mb: 3 }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          background:
+            theme.palette.mode === 'dark'
+              ? 'linear-gradient(145deg, #1a1a1a 0%, #2a2a2a 100%)'
+              : '#ffffff',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          border: `1px solid ${theme.palette.divider}`,
+          overflow: 'hidden',
+        },
+      }}
+    >
+      <Box
+        sx={{
+          background: theme.palette.primary.main,
+          color: theme.palette.primary.contrastText,
+          p: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box
+            component="img"
+            src="icon.png"
+            alt="WT-Log"
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              boxShadow: 3,
+            }}
+          />
+          <Typography variant="h6" component="div">
+            Configuración de la Estación
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} size="small" sx={{ color: 'inherit' }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <Divider />
+      <DialogContent sx={{ p: 3 }}>
+        <Box
+          sx={{
+            mb: 3,
+            '& .MuiFormLabel-root.Mui-focused': {
+              color: theme.palette.primary.main,
+            },
+          }}
+        >
           {/* Primera línea: Estación - Operador */}
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
             <TextField
@@ -250,6 +310,16 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
               error={!!errors.callsign}
               helperText={errors.callsign}
               margin="dense"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: theme.palette.primary.light,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.palette.primary.main,
+                  },
+                },
+              }}
             />
             <TextField
               label="Operador"
@@ -266,6 +336,16 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
               error={!!errors.operatorName}
               helperText={errors.operatorName}
               margin="dense"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: theme.palette.primary.light,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.palette.primary.main,
+                  },
+                },
+              }}
             />
           </Box>
 
@@ -291,7 +371,20 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
 
           {/* Tercera línea: País, CQ, ITU */}
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <FormControl fullWidth margin="dense">
+            <FormControl
+              fullWidth
+              margin="dense"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: theme.palette.primary.light,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.palette.primary.main,
+                  },
+                },
+              }}
+            >
               <InputLabel id="country-select-label">País</InputLabel>
               <Select
                 labelId="country-select-label"
@@ -481,10 +574,36 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
           </Box>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-        <Button onClick={handleCancel}>Cancelar</Button>
-        <Button onClick={handleSubmit} variant="contained" color="primary">
-          Guardar
+      <Divider />
+      <DialogActions sx={{ p: 2, gap: 1, justifyContent: 'space-between' }}>
+        <Button
+          onClick={handleCancel}
+          color="inherit"
+          sx={{
+            color: 'text.secondary',
+            '&:hover': {
+              backgroundColor: 'action.hover',
+            },
+          }}
+        >
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          color="primary"
+          variant="contained"
+          disabled={Object.keys(errors).length > 0}
+          sx={{
+            textTransform: 'none',
+            fontWeight: 500,
+            px: 3,
+            '&.Mui-disabled': {
+              backgroundColor: 'action.disabledBackground',
+              color: 'text.disabled',
+            },
+          }}
+        >
+          Guardar Cambios
         </Button>
       </DialogActions>
     </Dialog>
