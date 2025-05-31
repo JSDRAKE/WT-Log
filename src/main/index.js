@@ -1,6 +1,45 @@
-const { app, shell, BrowserWindow, Menu } = require('electron');
+const { app, shell, BrowserWindow, Menu, ipcMain } = require('electron');
 const { join } = require('path');
 const { electronApp, optimizer, is } = require('@electron-toolkit/utils');
+const fs = require('fs').promises;
+const path = require('path');
+
+// Ensure app data directory exists
+const appDataPath = app.getPath('userData');
+const settingsPath = path.join(appDataPath, 'settings.json');
+
+// Load settings from file
+async function loadSettings() {
+  try {
+    const data = await fs.readFile(settingsPath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      // File doesn't exist, return default settings
+      return {
+        callsign: '',
+        operatorName: '',
+        gridSquare: '',
+        qth: '',
+        country: 'Argentina',
+        ituZone: '14',
+        cqZone: '13',
+      };
+    }
+    console.error('Error loading settings:', error);
+    throw error;
+  }
+}
+
+// Save settings to file
+async function saveSettings(settings) {
+  try {
+    await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    throw error;
+  }
+}
 
 const icon = join(__dirname, '../../resources/icon.png');
 
@@ -188,6 +227,10 @@ app.whenReady().then(() => {
       ],
     },
   ];
+
+  // Set up IPC handlers
+  ipcMain.handle('load-settings', loadSettings);
+  ipcMain.handle('save-settings', (_, settings) => saveSettings(settings));
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, Container, Paper, Grid, Typography } from '@mui/material';
+import { Box, Container, Paper, Grid, Typography, Snackbar, Alert } from '@mui/material';
 import QsoTable from './components/QsoTable';
 import QsoForm from './components/QsoForm';
 import AboutDialog from './components/AboutDialog';
+import SettingsDialog from './components/SettingsDialog';
 
 const darkTheme = createTheme({
   palette: {
@@ -22,17 +23,72 @@ function App() {
   const [qsos, setQsos] = useState([]);
   const [currentQso, setCurrentQso] = useState(null);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
+    // Load settings when component mounts
+    const loadSettings = async () => {
+      try {
+        const savedSettings = await window.electron.ipcRenderer.invoke('load-settings');
+        if (savedSettings) {
+          setSettings(savedSettings);
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        setSnackbar({
+          open: true,
+          message: 'Error al cargar la configuración',
+          severity: 'error',
+        });
+      }
+    };
+
+    loadSettings();
+
+    // Listen for menu actions
+    const handleMenuAction = (_, action) => {
+      if (action === 'open-settings') {
+        setSettingsOpen(true);
+      }
+    };
+
     // Listen for the 'open-about' event from the main process
     const handleOpenAbout = () => setAboutOpen(true);
-    window.electron.ipcRenderer.on('open-about', handleOpenAbout);
 
-    // Clean up the event listener when the component unmounts
+    window.electron.ipcRenderer.on('open-about', handleOpenAbout);
+    window.electron.ipcRenderer.on('menu-action', handleMenuAction);
+
+    // Clean up event listeners when the component unmounts
     return () => {
       window.electron.ipcRenderer.removeListener('open-about', handleOpenAbout);
+      window.electron.ipcRenderer.removeListener('menu-action', handleMenuAction);
     };
   }, []);
+
+  const handleSaveSettings = async (newSettings) => {
+    try {
+      await window.electron.ipcRenderer.invoke('save-settings', newSettings);
+      setSettings(newSettings);
+      setSnackbar({
+        open: true,
+        message: 'Configuración guardada correctamente',
+        severity: 'success',
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al guardar la configuración',
+        severity: 'error',
+      });
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
 
   const handleAboutClose = () => {
     setAboutOpen(false);
@@ -77,6 +133,22 @@ function App() {
           </Typography>
         </Box>
         <AboutDialog open={aboutOpen} onClose={handleAboutClose} />
+        <SettingsDialog
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          onSave={handleSaveSettings}
+          initialData={settings}
+        />
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
