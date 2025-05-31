@@ -97,7 +97,7 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
     time: format(new Date(), 'HH:mm'),
     rstReceived: '59',
     rstSent: '59',
-    band: '20m',
+    band: '40m',
     frequency: '',
     mode: 'SSB',
     name: '',
@@ -248,7 +248,7 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
         updates.band = band;
       }
     }
-    
+
     setQso((prev) => ({
       ...prev,
       ...updates,
@@ -260,8 +260,35 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
     onSave(qso);
   };
 
+  const handleClear = () => {
+    // Clear only the specified fields
+    setQso((prev) => ({
+      ...prev,
+      callSign: '',
+      name: '',
+      gridLocator: '',
+      qth: '',
+      country: '',
+      cqZone: '',
+      ituZone: '',
+      notes: '',
+    }));
+
+    // Call the original onClear if provided
+    if (onClear) onClear();
+  };
+
   return (
-    <Box component="form" onSubmit={handleSubmit}>
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        maxWidth: '1200px',
+        mx: 'auto',
+        px: 2,
+        width: '100%',
+      }}
+    >
       <Typography variant="h6" gutterBottom>
         {initialQso ? 'Editar Contacto' : 'Nuevo Contacto'}
       </Typography>
@@ -474,7 +501,22 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
             inputProps={{
               step: '0.001',
               min: '0',
+              maxLength: 10,
               placeholder: 'ej: 14.195',
+              style: {
+                '-moz-appearance': 'textfield', // Firefox
+                width: '8em', // Adjust width to fit 10 characters
+              },
+            }}
+            sx={{
+              '& input[type=number]': {
+                '-moz-appearance': 'textfield', // Firefox
+              },
+              '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button':
+                {
+                  '-webkit-appearance': 'none', // WebKit/Blink
+                  margin: 0,
+                },
             }}
           />
         </Grid>
@@ -545,18 +587,23 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
             label="CQ"
             name="cqZone"
             value={qso.cqZone}
-            onChange={handleChange}
+            onChange={(e) => {
+              // Only allow numbers
+              const value = e.target.value.replace(/[^0-9]/g, '');
+              handleChange({ target: { name: 'cqZone', value } });
+            }}
             autoComplete="off"
             margin="normal"
             size="small"
             inputProps={{
               maxLength: 2,
+              inputMode: 'numeric',
+              pattern: '[0-9]*',
               style: {
                 textAlign: 'center',
                 padding: '8.5px 4px',
                 width: '60px',
                 letterSpacing: '1px',
-                textTransform: 'uppercase',
               },
             }}
             sx={{
@@ -575,18 +622,23 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
             label="ITU"
             name="ituZone"
             value={qso.ituZone}
-            onChange={handleChange}
+            onChange={(e) => {
+              // Only allow numbers
+              const value = e.target.value.replace(/[^0-9]/g, '');
+              handleChange({ target: { name: 'ituZone', value } });
+            }}
             autoComplete="off"
             margin="normal"
             size="small"
             inputProps={{
               maxLength: 2,
+              inputMode: 'numeric',
+              pattern: '[0-9]*',
               style: {
                 textAlign: 'center',
                 padding: '8.5px 4px',
                 width: '60px',
                 letterSpacing: '1px',
-                textTransform: 'uppercase',
               },
             }}
             sx={{
@@ -631,21 +683,27 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
       </Grid>
 
       {/* Fifth Row - Comentario */}
-      <Grid container>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Comentario"
-            name="notes"
-            value={qso.notes}
-            onChange={handleChange}
-            multiline
-            rows={3}
-            margin="normal"
-            size="small"
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ width: '100%', mt: 2, mb: 2 }}>
+        <TextField
+          fullWidth
+          label="Comentario"
+          name="notes"
+          value={qso.notes}
+          onChange={handleChange}
+          multiline
+          rows={3}
+          variant="outlined"
+          size="small"
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              width: '100%',
+            },
+            '& .MuiOutlinedInput-input': {
+              width: '100%',
+            },
+          }}
+        />
+      </Box>
 
       {/* Sixth Row - Botones */}
       <Grid container justifyContent="flex-end" spacing={2} sx={{ mt: 2 }}>
@@ -653,7 +711,7 @@ const QsoForm = ({ onSave, qso: initialQso, onClear }) => {
           <Button
             variant="outlined"
             color="primary"
-            onClick={onClear}
+            onClick={handleClear}
             size="large"
             sx={{ minWidth: '120px' }}
           >
