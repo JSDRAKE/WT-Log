@@ -1,55 +1,47 @@
-import { useState } from 'react'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
-import { Box, AppBar, Toolbar, Typography, Container, Paper, Grid } from '@mui/material'
-import QsoTable from './components/QsoTable'
-import QsoForm from './components/QsoForm'
+import { useState } from 'react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { Box, Container, Paper, Grid } from '@mui/material';
+import QsoTable from './components/QsoTable';
+import QsoForm from './components/QsoForm';
 
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#1976d2'
+      main: '#1976d2',
     },
     secondary: {
-      main: '#dc004e'
-    }
-  }
-})
+      main: '#dc004e',
+    },
+  },
+});
 
 function App() {
-  const [qsos, setQsos] = useState([])
-  const [currentQso, setCurrentQso] = useState(null)
+  const [qsos, setQsos] = useState([]);
+  const [currentQso, setCurrentQso] = useState(null);
 
   const handleSaveQso = (qso) => {
     if (currentQso) {
       // Actualizar QSO existente
-      setQsos(qsos.map((q) => (q.id === currentQso.id ? { ...q, ...qso } : q)))
+      setQsos(qsos.map((q) => (q.id === currentQso.id ? { ...q, ...qso } : q)));
     } else {
       // Agregar nuevo QSO
-      setQsos([...qsos, { ...qso, id: Date.now() }])
+      setQsos([...qsos, { ...qso, id: Date.now() }]);
     }
-    setCurrentQso(null)
-  }
+    setCurrentQso(null);
+  };
 
   const handleDeleteQso = (id) => {
     if (window.confirm('¿Estás seguro de eliminar este contacto?')) {
-      setQsos(qsos.filter((q) => q.id !== id))
+      setQsos(qsos.filter((q) => q.id !== id));
     }
-  }
+  };
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <AppBar position="static">
-          <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              WT-Log - Libro de Guardia LU9WT
-            </Typography>
-          </Toolbar>
-        </AppBar>
-
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
@@ -74,7 +66,7 @@ function App() {
         </Container>
       </Box>
     </ThemeProvider>
-  )
+  );
 }
 
-export default App
+export default App;
