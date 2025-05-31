@@ -8,18 +8,28 @@ import {
   Button,
   TextField,
   Box,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Select,
 } from '@mui/material';
 
+// Import country data from external file
+import { countryData } from '../data/countries';
+
 const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [showItuZoneSelector, setShowItuZoneSelector] = useState(false);
+  const [isItuFocused, setIsItuFocused] = useState(false);
   const defaultSettings = useMemo(
     () => ({
       callsign: '',
       operatorName: '',
       gridSquare: '',
       qth: '',
-      country: 'Argentina',
-      ituZone: '14',
-      cqZone: '13',
+      country: '',
+      ituZone: '',
+      cqZone: '',
       name: '',
       city: '',
       locator: '',
@@ -80,6 +90,58 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
     onClose();
   };
 
+  const handleCountryChange = (e) => {
+    const countryName = e.target.value;
+    const country = countryData.find((c) => c.name === countryName);
+    // Update the selected country and reset ITU zone selector
+    setSelectedCountry(country);
+    setShowItuZoneSelector(false);
+    setIsItuFocused(false);
+
+    // Create a new settings object with the updated country and zones
+    const newSettings = {
+      ...settings,
+      country: countryName,
+      cqZone: country?.cq || '',
+      ituZone: country?.itu || '',
+    };
+    // Update the settings state
+    setSettings(newSettings);
+  };
+
+  const handleItuZoneSelect = (e) => {
+    const newValue = e.target.value;
+    // Create a new settings object with the updated ITU zone
+    const newSettings = {
+      ...settings,
+      ituZone: newValue,
+    };
+    // Update the settings state
+    setSettings(newSettings);
+    // Also update the selected country's ITU zone
+    if (selectedCountry) {
+      setSelectedCountry({
+        ...selectedCountry,
+        itu: newValue,
+      });
+    }
+    // Close the dropdown
+    setShowItuZoneSelector(false);
+    setIsItuFocused(false);
+  };
+
+  const handleItuFocus = () => {
+    if (selectedCountry?.ituZones?.length > 1) {
+      setShowItuZoneSelector(true);
+      setIsItuFocused(true);
+    }
+  };
+
+  const handleItuBlur = () => {
+    setShowItuZoneSelector(false);
+    setIsItuFocused(false);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -95,6 +157,10 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
         ...prev,
         [name]: value.toUpperCase(),
       }));
+    } else if (name === 'country') {
+      // Handle country change separately
+      handleCountryChange(e);
+      return; // Skip further processing as handleCountryChange updates the state
     } else if (name === 'gridSquare') {
       // Allow only letters and numbers, convert to uppercase, limit to 6 chars
       const newValue = value
@@ -223,19 +289,164 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
             />
           </Box>
 
-          {/* Tercera línea: País */}
-          <Box sx={{ mb: 2 }}>
+          {/* Tercera línea: País, CQ, ITU */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <FormControl fullWidth margin="dense">
+              <InputLabel id="country-select-label">País</InputLabel>
+              <Select
+                labelId="country-select-label"
+                id="country-select"
+                value={settings.country}
+                label="País"
+                onChange={handleChange}
+                name="country"
+                displayEmpty
+                renderValue={(selected) => {
+                  if (!selected) {
+                    return <em>Selecciona un país</em>;
+                  }
+                  return selected;
+                }}
+              >
+                <MenuItem disabled value="">
+                  <em>Selecciona un país</em>
+                </MenuItem>
+                {countryData.map((country) => (
+                  <MenuItem key={country.name} value={country.name}>
+                    {country.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <TextField
-              label="País"
-              name="country"
-              value={settings.country}
+              label="CQ"
+              name="cqZone"
+              value={settings.cqZone || ''}
               onChange={handleChange}
-              fullWidth
+              inputProps={{
+                maxLength: 2,
+                inputMode: 'numeric',
+                pattern: '\\d{2}',
+                placeholder: '00',
+                style: {
+                  textAlign: 'center',
+                  fontSize: '1.1rem',
+                  letterSpacing: '0.2em',
+                  width: '100%',
+                },
+              }}
               margin="dense"
+              error={!!errors.cqZone}
+              helperText={errors.cqZone}
+              sx={{
+                minWidth: '80px',
+                '& .MuiInputBase-root': {
+                  height: '56px',
+                },
+                '& .MuiInputBase-input': {
+                  textAlign: 'center',
+                  padding: '8.5px 12px',
+                  backgroundColor: settings.country ? 'rgba(0, 0, 0, 0.04)' : 'inherit',
+                },
+              }}
+              InputProps={{
+                readOnly: !!settings.country,
+              }}
             />
+
+            <Box sx={{ position: 'relative', minWidth: '80px' }}>
+              <TextField
+                label="ITU"
+                name="ituZone"
+                value={settings.ituZone || ''}
+                onChange={handleChange}
+                onFocus={handleItuFocus}
+                onBlur={handleItuBlur}
+                inputProps={{
+                  maxLength: 2,
+                  inputMode: 'numeric',
+                  pattern: '\\d{2}',
+                  placeholder: '00',
+                  style: {
+                    textAlign: 'center',
+                    fontSize: '1.1rem',
+                    letterSpacing: '0.2em',
+                    width: '100%',
+                    cursor: selectedCountry?.ituZones?.length > 1 ? 'pointer' : 'default',
+                  },
+                }}
+                margin="dense"
+                error={!!errors.ituZone}
+                helperText={errors.ituZone}
+                sx={{
+                  width: '100%',
+                  '& .MuiInputBase-root': {
+                    height: '56px',
+                  },
+                  '& .MuiInputBase-input': {
+                    textAlign: 'center',
+                    padding: '8.5px 12px',
+                    backgroundColor: settings.country ? 'rgba(0, 0, 0, 0.04)' : 'inherit',
+                  },
+                }}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: selectedCountry?.ituZones?.length > 1 && (
+                    <Box
+                      component="span"
+                      sx={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      ▼
+                    </Box>
+                  ),
+                }}
+              />
+              {showItuZoneSelector && isItuFocused && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 1,
+                    backgroundColor: 'background.paper',
+                    boxShadow: 1,
+                    borderRadius: 1,
+                    mt: 0.5,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {selectedCountry?.ituZones?.map((zone) => (
+                    <Box
+                      key={zone.value}
+                      onClick={() => {
+                        handleItuZoneSelect({ target: { value: zone.value } });
+                      }}
+                      sx={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}
+                    >
+                      {zone.value}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Box>
           </Box>
 
-          {/* Cuarta línea: Grid - Locator - CQ - ITU */}
+          {/* Cuarta línea: Grid Locator */}
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
             <TextField
               label="Grid Locator"
@@ -263,67 +474,6 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
                   height: '56px',
                 },
                 '& .MuiInputBase-input': {
-                  padding: '8.5px 12px',
-                },
-              }}
-            />
-            <TextField
-              label="CQ"
-              name="cqZone"
-              value={settings.cqZone || ''}
-              onChange={handleChange}
-              inputProps={{
-                maxLength: 2,
-                inputMode: 'numeric',
-                pattern: '\\d{2}',
-                placeholder: '00',
-                style: {
-                  textAlign: 'center',
-                  fontSize: '1.1rem',
-                  letterSpacing: '0.2em',
-                  width: '100%',
-                },
-              }}
-              margin="dense"
-              error={!!errors.cqZone}
-              helperText={errors.cqZone}
-              sx={{
-                minWidth: '80px',
-                '& .MuiInputBase-root': {
-                  height: '56px',
-                },
-                '& .MuiInputBase-input': {
-                  padding: '8.5px 12px',
-                },
-              }}
-            />
-            <TextField
-              label="ITU"
-              name="ituZone"
-              value={settings.ituZone || ''}
-              onChange={handleChange}
-              inputProps={{
-                maxLength: 2,
-                inputMode: 'numeric',
-                pattern: '\\d{2}',
-                placeholder: '00',
-                style: {
-                  textAlign: 'center',
-                  fontSize: '1.1rem',
-                  letterSpacing: '0.2em',
-                  width: '100%',
-                },
-              }}
-              margin="dense"
-              error={!!errors.ituZone}
-              helperText={errors.ituZone}
-              sx={{
-                minWidth: '80px',
-                '& .MuiInputBase-root': {
-                  height: '56px',
-                },
-                '& .MuiInputBase-input': {
-                  textAlign: 'center',
                   padding: '8.5px 12px',
                 },
               }}

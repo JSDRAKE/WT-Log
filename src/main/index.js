@@ -21,11 +21,11 @@ async function loadSettings() {
         operatorName: '',
         name: '',
         city: '',
-        country: 'Argentina',
+        country: '',
         gridSquare: '',
         locator: '',
-        cqZone: '13',
-        ituZone: '14',
+        cqZone: '',
+        ituZone: '',
       };
     }
     console.error('Error loading settings:', error);
