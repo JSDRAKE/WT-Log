@@ -48,6 +48,8 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
   // Update settings when dialog opens or initialData changes
   useEffect(() => {
     if (open) {
+      // Reset errors when dialog opens
+      setErrors({});
       const newSettings = initialData
         ? { ...defaultSettings, ...initialData }
         : { ...defaultSettings };
@@ -204,8 +206,8 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
   const validate = () => {
     const newErrors = {};
 
-    // Required fields
-    if (!settings.callsign) {
+    // Validate callsign
+    if (!settings.callsign || settings.callsign.trim() === '') {
       newErrors.callsign = 'Indicativo es requerido';
     } else if (settings.callsign.length > 15) {
       newErrors.callsign = 'Máximo 15 caracteres';
@@ -213,7 +215,8 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
       newErrors.callsign = 'Solo letras, números y /';
     }
 
-    if (!settings.operatorName) {
+    // Validate operator name
+    if (!settings.operatorName || settings.operatorName.trim() === '') {
       newErrors.operatorName = 'Nombre del operador es requerido';
     } else if (settings.operatorName.length > 15) {
       newErrors.operatorName = 'Máximo 15 caracteres';
@@ -221,16 +224,60 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
       newErrors.operatorName = 'Solo letras, números y /';
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // Only update errors if they've changed
+    if (JSON.stringify(newErrors) !== JSON.stringify(errors)) {
+      setErrors(newErrors);
+    }
+
+    // Form is valid if there are no errors and required fields are filled
+    const isValid =
+      Object.keys(newErrors).length === 0 &&
+      settings.callsign?.trim() &&
+      settings.operatorName?.trim();
+
+    return isValid;
   };
 
   const handleSubmit = () => {
-    if (validate()) {
+    const isValid = validate();
+    console.log('Form submission - isValid:', isValid);
+    console.log('Current settings:', settings);
+    console.log('Current errors:', errors);
+
+    if (isValid) {
       onSave(settings);
       onClose();
+    } else {
+      console.warn('Form validation failed');
     }
   };
+
+  // Check if form is valid for enabling/disabling the save button
+  const isFormValid = useMemo(() => {
+    // Check if required fields are filled
+    const hasCallsign = Boolean(settings.callsign?.trim());
+    const hasOperatorName = Boolean(settings.operatorName?.trim());
+
+    // Filter out empty errors
+    const activeErrors = Object.entries(errors).reduce((acc, [key, value]) => {
+      if (value) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
+    const hasNoErrors = Object.keys(activeErrors).length === 0;
+
+    console.log('isFormValid check:', {
+      hasCallsign,
+      hasOperatorName,
+      hasNoErrors,
+      activeErrors,
+      allErrors: errors,
+    });
+
+    return hasCallsign && hasOperatorName && hasNoErrors;
+  }, [settings, errors]);
 
   const theme = useTheme();
 
@@ -592,7 +639,7 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
           onClick={handleSubmit}
           color="primary"
           variant="contained"
-          disabled={Object.keys(errors).length > 0}
+          disabled={!isFormValid}
           sx={{
             textTransform: 'none',
             fontWeight: 500,
