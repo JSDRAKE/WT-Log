@@ -30,13 +30,11 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
       callsign: '',
       operatorName: '',
       gridSquare: '',
-      qth: '',
       country: '',
-      ituZone: '',
       cqZone: '',
+      ituZone: '',
       name: '',
       city: '',
-      locator: '',
     }),
     []
   );
@@ -48,43 +46,58 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
   // Update settings when dialog opens or initialData changes
   useEffect(() => {
     if (open) {
-      // Reset errors when dialog opens
       setErrors({});
       const newSettings = initialData
-        ? { ...defaultSettings, ...initialData }
+        ? {
+            ...defaultSettings,
+            ...initialData,
+            city: initialData.qth || initialData.city || '',
+            gridSquare: initialData.locator || initialData.gridSquare || '',
+          }
         : { ...defaultSettings };
       setInitialSettings(newSettings);
       setSettings(newSettings);
-      setErrors({});
     }
   }, [open, initialData, defaultSettings]);
 
   const validateField = (name, value) => {
-    if (name === 'callsign' || name === 'operatorName') {
-      // Only allow letters, numbers, and forward slashes
-      if (!/^[A-Z0-9/]*$/i.test(value)) {
-        return 'Solo se permiten letras, números y /';
-      }
-      // Check max length
-      if (value.length > 15) {
-        return 'Máximo 15 caracteres';
-      }
-    } else if (name === 'gridSquare') {
-      // Validate Grid Locator format (AA00aa)
-      if (value && !/^[A-Za-z]{2}[0-9]{2}[A-Za-z]{0,2}$/i.test(value)) {
-        return 'Formato inválido (ej: AA00aa)';
-      }
-      if (value.length > 6) {
-        return 'Máximo 6 caracteres';
-      }
-    } else if (name === 'cqZone' || name === 'ituZone') {
-      // Validate CQ/ITU (exactly 2 digits)
-      if (value && !/^\d{0,2}$/.test(value)) {
-        return 'Solo números';
-      }
-      if (value.length > 0 && value.length < 2) {
-        return 'Se requieren 2 dígitos';
-      }
+    // Skip validation for empty fields except required ones
+    if (!value && name !== 'callsign' && name !== 'operatorName') {
+      return '';
+    }
+
+    switch (name) {
+      case 'callsign':
+      case 'operatorName':
+        if (!/^[A-Z0-9/]*$/i.test(value)) {
+          return 'Solo se permiten letras, números y /';
+        }
+        if (value.length > 15) {
+          return 'Máximo 15 caracteres';
+        }
+        break;
+
+      case 'gridSquare':
+        if (value && !/^[A-Za-z]{2}[0-9]{2}[A-Za-z]{0,2}$/i.test(value)) {
+          return 'Formato inválido (ej: AA00aa)';
+        }
+        if (value.length > 6) {
+          return 'Máximo 6 caracteres';
+        }
+        break;
+
+      case 'cqZone':
+      case 'ituZone':
+        if (value && !/^\d{0,2}$/.test(value)) {
+          return 'Solo números';
+        }
+        if (value && value.length !== 2) {
+          return 'Se requieren 2 dígitos';
+        }
+        break;
+
+      default:
+        break;
     }
     return '';
   };
@@ -245,7 +258,15 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
     console.log('Current errors:', errors);
 
     if (isValid) {
-      onSave(settings);
+      // Create a new settings object with the correct field names
+      const { city, gridSquare, ...rest } = settings;
+      const settingsToSave = {
+        ...rest,
+        qth: city,
+        locator: gridSquare,
+      };
+      console.log('Saving settings:', settingsToSave);
+      onSave(settingsToSave);
       onClose();
     } else {
       console.warn('Form validation failed');
@@ -666,6 +687,7 @@ SettingsDialog.propTypes = {
     operatorName: PropTypes.string,
     name: PropTypes.string,
     city: PropTypes.string,
+    qth: PropTypes.string,
     country: PropTypes.string,
     gridSquare: PropTypes.string,
     locator: PropTypes.string,

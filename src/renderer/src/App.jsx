@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, Container, Paper, Grid, Typography, Snackbar, Alert, IconButton } from '@mui/material';
+import {
+  Box,
+  Container,
+  Paper,
+  Grid,
+  Typography,
+  Snackbar,
+  Alert,
+  IconButton,
+} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import QsoTable from './components/QsoTable';
 import QsoForm from './components/QsoForm';
@@ -155,7 +164,13 @@ function App() {
         <Snackbar
           open={snackbar.open}
           autoHideDuration={5000}
-          onClose={handleCloseSnackbar}
+          onClose={(event, reason) => {
+            // No cerrar al hacer clic fuera del Snackbar
+            if (reason === 'clickaway') {
+              return;
+            }
+            handleCloseSnackbar();
+          }}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
           sx={{ '& .MuiAlert-action': { paddingLeft: 0 } }}
         >
