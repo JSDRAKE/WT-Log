@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { DataGrid } from '@mui/x-data-grid';
 import { IconButton, Tooltip, Box } from '@mui/material';
 import { format } from 'date-fns';
@@ -56,7 +56,7 @@ const QsoTable = ({ qsos, onEdit, onDelete }) => {
   ];
 
   return (
-    <div style={{ height: '70vh', width: '100%' }}>
+    <Box sx={{ height: '70vh', width: '100%' }}>
       <DataGrid
         rows={qsos}
         columns={columns}
@@ -71,8 +71,14 @@ const QsoTable = ({ qsos, onEdit, onDelete }) => {
               : '1 contacto seleccionado',
         }}
       />
-    </div>
+    </Box>
   );
+};
+
+QsoTable.propTypes = {
+  qsos: PropTypes.arrayOf(PropTypes.object).isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
 };
 
 export default QsoTable;
