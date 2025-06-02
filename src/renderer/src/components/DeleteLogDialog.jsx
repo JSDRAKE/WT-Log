@@ -186,20 +186,38 @@ export default function DeleteLogDialog({ open, onClose, onDelete }) {
                 },
               }}
             >
-              <Typography variant="subtitle2" gutterBottom>
-                ¿Estás seguro de que deseas eliminar este log?
+              <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1.5 }}>
+                {selectedLog.name}
               </Typography>
-              <Typography variant="body2">
-                <Box>
-                  <strong>Nombre:</strong> {selectedLog.name}
-                </Box>
-                <Box>
-                  <strong>Fecha de creación:</strong>{' '}
-                  {new Date(selectedLog.createdAt).toLocaleString()}
-                </Box>
-                <Box>
-                  <strong>QSOs registrados:</strong> {selectedLog.qsos?.length || 0}
-                </Box>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  fontSize: '0.875rem',
+                  mb: 0.5,
+                }}
+              >
+                {`Creado: ${new Date(selectedLog.createdAt).toLocaleDateString('es-ES', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                })}`}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  fontSize: '0.875rem',
+                  mb: 1.5,
+                }}
+              >
+                {selectedLog.qsos ? selectedLog.qsos.length : 0} QSOs registrados
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'medium', color: 'warning.dark' }}>
+                ¿Estás seguro de que deseas eliminar este log?
               </Typography>
               <Typography variant="body2" sx={{ mt: 1, fontWeight: 'medium' }}>
                 Esta acción no se puede deshacer.
