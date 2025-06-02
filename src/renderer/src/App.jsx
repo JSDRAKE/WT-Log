@@ -37,7 +37,10 @@ function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState(null);
-  const [currentLog, setCurrentLog] = useState(null); // Will be used in future updates
+  const [currentLog, setCurrentLog] = useState(null);
+  // Keep logs state for future use when we implement log listing in the main UI
+  // eslint-disable-next-line no-unused-vars
+  const [logs, setLogs] = useState([]);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [newLogOpen, setNewLogOpen] = useState(false);
@@ -94,36 +97,43 @@ function App() {
 
   const handleNewLog = async (logData) => {
     try {
-      // Create a new log in the database
       const newLog = await window.electron.ipcRenderer.invoke('create-log', {
         name: logData.name,
-        createdAt: new Date().toISOString(),
         settings: settings || {},
       });
-
-      // Update the current log in the state
       setCurrentLog(newLog);
-
-      // Clear the QSOs list for the new log
       setQsos([]);
-
-      // Show success message
       setSnackbar({
         open: true,
         message: `Log "${logData.name}" creado correctamente`,
         severity: 'success',
       });
-
-      // Close the dialog
-      setNewLogOpen(false);
-
-      // Optionally, you might want to load the empty QSOs for this new log
-      // This would depend on your app's architecture
+      // Don't close the dialog here - we'll let the user see the new log in the list
     } catch (error) {
-      console.error('Error creating log:', error);
       setSnackbar({
         open: true,
         message: `Error al crear el log: ${error.message}`,
+        severity: 'error',
+      });
+      throw error; // Re-throw to let the dialog handle the error
+    }
+  };
+
+  const handleLoadLog = async (log) => {
+    try {
+      const logContent = await window.electron.ipcRenderer.invoke('load-log', log.filePath);
+      setCurrentLog(logContent);
+      setQsos(logContent.qsos || []);
+      setNewLogOpen(false);
+      setSnackbar({
+        open: true,
+        message: `Log "${log.name}" cargado correctamente`,
+        severity: 'success',
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: `Error al cargar el log: ${error.message}`,
         severity: 'error',
       });
     }
@@ -267,7 +277,8 @@ function App() {
                   open={newLogOpen}
                   onClose={() => setNewLogOpen(false)}
                   onSave={handleNewLog}
-                  settings={settings}
+                  onLoad={handleLoadLog}
+                  logs={logs}
                 />
               </Paper>
             </Grid>

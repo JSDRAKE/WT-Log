@@ -255,12 +255,80 @@ app.on('window-all-closed', () => {
   }
 });
 
-// IPC Handlers
-ipcMain.handle('create-log', async (event, { name, settings = {} }) => {
+// Helper function to get all logs
+async function getAllLogs() {
+  const logsDir = path.join(app.getPath('userData'), 'Logs');
   try {
-    const logsDir = path.join(app.getPath('userData'), 'Logs');
     await fs.mkdir(logsDir, { recursive: true });
+    const files = await fs.readdir(logsDir);
+    const logFiles = files.filter((file) => file.endsWith('.json'));
+    const logs = [];
+    for (const file of logFiles) {
+      try {
+        const filePath = path.join(logsDir, file);
+        const content = await fs.readFile(filePath, 'utf8');
+        const logData = JSON.parse(content);
+        logs.push({
+          ...logData,
+          fileName: file,
+          filePath,
+          // Ensure createdAt is a Date object for consistent sorting
+          createdAt: logData.createdAt ? new Date(logData.createdAt) : new Date(0),
+        });
+      } catch (error) {
+        console.error(`Error reading log file ${file}:`, error);
+      }
+    }
+    // Sort logs by createdAt in descending order (newest first)
+    return logs.sort((a, b) => b.createdAt - a.createdAt);
+  } catch (error) {
+    console.error('Error reading logs directory:', error);
+    return [];
+  }
+}
 
+// IPC Handlers
+ipcMain.handle('get-logs', async () => {
+  return await getAllLogs();
+});
+
+ipcMain.handle('log-exists', async (_, name) => {
+  const logs = await getAllLogs();
+  const logName = name.endsWith('.json') ? name : `${name}.json`;
+  return logs.some((log) => log.fileName.toLowerCase() === logName.toLowerCase());
+});
+
+// Load a log file by path
+ipcMain.handle('load-log', async (_, filePath) => {
+  try {
+    const content = await fs.readFile(filePath, 'utf8');
+    const logData = JSON.parse(content);
+    return {
+      ...logData,
+      filePath,
+      fileName: path.basename(filePath),
+    };
+  } catch (error) {
+    console.error('Error loading log file:', error);
+    throw new Error('Error al cargar el archivo de log');
+  }
+});
+
+// Create a new log file
+ipcMain.handle('create-log', async (_, { name, settings = {} }) => {
+  const logsDir = path.join(app.getPath('userData'), 'Logs');
+  await fs.mkdir(logsDir, { recursive: true });
+
+  // Check if log already exists using the same check as the log-exists handler
+  const logs = await getAllLogs();
+  const logName = name.endsWith('.json') ? name : `${name}.json`;
+  const logExists = logs.some((log) => log.fileName.toLowerCase() === logName.toLowerCase());
+
+  if (logExists) {
+    throw new Error('Ya existe un log con ese nombre');
+  }
+
+  try {
     // Clean and validate the log name
     const cleanName = name.trim();
     if (!cleanName) {
