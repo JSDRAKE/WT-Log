@@ -19,6 +19,7 @@ import SettingsDialog from './components/SettingsDialog';
 import WelcomeDialog from './components/WelcomeDialog';
 import NewLogDialog from './components/NewLogDialog';
 import LoadLogDialog from './components/LoadLogDialog';
+import DeleteLogDialog from './components/DeleteLogDialog';
 
 const darkTheme = createTheme({
   palette: {
@@ -46,6 +47,37 @@ function App() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [newLogOpen, setNewLogOpen] = useState(false);
   const [loadLogOpen, setLoadLogOpen] = useState(false);
+  const [deleteLogOpen, setDeleteLogOpen] = useState(false);
+
+  // Handle menu actions
+  useEffect(() => {
+    const handleMenuAction = (_, action) => {
+      switch (action) {
+        case 'new-log':
+          setNewLogOpen(true);
+          break;
+        case 'load-log':
+          setLoadLogOpen(true);
+          break;
+        case 'delete-log':
+          setDeleteLogOpen(true);
+          break;
+        case 'settings':
+          setSettingsOpen(true);
+          break;
+        case 'about':
+          setAboutOpen(true);
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.electron.ipcRenderer.on('menu-action', handleMenuAction);
+    return () => {
+      window.electron.ipcRenderer.removeListener('menu-action', handleMenuAction);
+    };
+  }, []);
 
   useEffect(() => {
     // Load settings when component mounts
@@ -128,18 +160,47 @@ function App() {
       const logContent = await window.electron.ipcRenderer.invoke('load-log', log.filePath);
       setCurrentLog(logContent);
       setQsos(logContent.qsos || []);
-      setNewLogOpen(false);
+      setLoadLogOpen(false);
       setSnackbar({
         open: true,
         message: `Log "${log.name}" cargado correctamente`,
         severity: 'success',
       });
     } catch (error) {
+      console.error('Error loading log:', error);
       setSnackbar({
         open: true,
-        message: `Error al cargar el log: ${error.message}`,
+        message: 'Error al cargar el log',
         severity: 'error',
       });
+    }
+  };
+
+  const handleDeleteLog = async (log) => {
+    try {
+      await window.electron.ipcRenderer.invoke('delete-log', log.filePath);
+
+      // If the deleted log is the currently loaded one, clear the current log
+      if (currentLog && currentLog.filePath === log.filePath) {
+        setCurrentLog(null);
+        setQsos([]);
+      }
+
+      setSnackbar({
+        open: true,
+        message: `Log "${log.name}" eliminado correctamente`,
+        severity: 'success',
+      });
+
+      return true; // Indicate success
+    } catch (error) {
+      console.error('Error deleting log:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al eliminar el log',
+        severity: 'error',
+      });
+      return false; // Indicate failure
     }
   };
 
@@ -288,6 +349,11 @@ function App() {
                   open={loadLogOpen}
                   onClose={() => setLoadLogOpen(false)}
                   onLoad={handleLoadLog}
+                />
+                <DeleteLogDialog
+                  open={deleteLogOpen}
+                  onClose={() => setDeleteLogOpen(false)}
+                  onDelete={handleDeleteLog}
                 />
               </Paper>
             </Grid>

@@ -360,5 +360,27 @@ ipcMain.handle('create-log', async (_, { name, settings = {} }) => {
   }
 });
 
+// Delete a log file
+ipcMain.handle('delete-log', async (_, filePath) => {
+  try {
+    // Check if the file exists before trying to delete it
+    try {
+      await fs.access(filePath);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        throw new Error('El archivo del log no existe');
+      }
+      throw error;
+    }
+
+    // Delete the log file
+    await fs.unlink(filePath);
+    return true;
+  } catch (error) {
+    console.error('Error deleting log file:', error);
+    throw new Error(`Error al eliminar el log: ${error.message}`);
+  }
+});
+
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
