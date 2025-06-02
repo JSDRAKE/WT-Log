@@ -37,6 +37,7 @@ function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState(null);
+  const [currentLog, setCurrentLog] = useState(null); // Will be used in future updates
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [newLogOpen, setNewLogOpen] = useState(false);
@@ -91,14 +92,41 @@ function App() {
     };
   }, []);
 
-  const handleNewLog = (logData) => {
-    // Aquí puedes manejar la creación del nuevo log
-    console.log('Nuevo log creado:', logData);
-    setSnackbar({
-      open: true,
-      message: `Log "${logData.name}" creado correctamente`,
-      severity: 'success',
-    });
+  const handleNewLog = async (logData) => {
+    try {
+      // Create a new log in the database
+      const newLog = await window.electron.ipcRenderer.invoke('create-log', {
+        name: logData.name,
+        createdAt: new Date().toISOString(),
+        settings: settings || {},
+      });
+
+      // Update the current log in the state
+      setCurrentLog(newLog);
+
+      // Clear the QSOs list for the new log
+      setQsos([]);
+
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: `Log "${logData.name}" creado correctamente`,
+        severity: 'success',
+      });
+
+      // Close the dialog
+      setNewLogOpen(false);
+
+      // Optionally, you might want to load the empty QSOs for this new log
+      // This would depend on your app's architecture
+    } catch (error) {
+      console.error('Error creating log:', error);
+      setSnackbar({
+        open: true,
+        message: `Error al crear el log: ${error.message}`,
+        severity: 'error',
+      });
+    }
   };
 
   const handleSaveSettings = async (newSettings) => {

@@ -17,21 +17,31 @@ const NewLogDialog = ({ open, onClose, onSave }) => {
   const [logName, setLogName] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = () => {
-    if (!logName.trim()) {
+  const handleSubmit = (e) => {
+    e.preventDefault(); // Prevent default form submission
+
+    const trimmedName = logName.trim();
+
+    // Validate input
+    if (!trimmedName) {
       setError('El nombre es obligatorio');
       return;
     }
 
+    if (trimmedName.length > 25) {
+      setError('El nombre no puede tener más de 25 caracteres');
+      return;
+    }
+
+    // Call the onSave prop with the log data
     onSave({
-      name: logName.trim(),
+      name: trimmedName,
       createdAt: new Date().toISOString(),
     });
 
     // Reset form
     setLogName('');
     setError('');
-    onClose();
   };
 
   return (
@@ -74,40 +84,51 @@ const NewLogDialog = ({ open, onClose, onSave }) => {
       </Box>
 
       <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mt: 2 }}>
-          <TextField
-            label="Nombre del Log"
-            variant="outlined"
-            value={logName}
-            onChange={(e) => {
-              if (e.target.value.length <= 25) {
-                setLogName(e.target.value);
-                if (error) setError('');
-              }
-            }}
-            inputProps={{ maxLength: 25 }}
-            error={!!error}
-            helperText={error || `${logName.length}/25 caracteres`}
-            autoFocus
-            sx={{ flexGrow: 1 }}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSubmit}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              height: '56px', // Match TextField height
-              px: 3,
-            }}
-          >
-            Crear Log
-          </Button>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            <TextField
+              label="Nombre del Log"
+              variant="outlined"
+              value={logName}
+              onChange={(e) => {
+                setLogName(e.target.value.slice(0, 25));
+                setError('');
+              }}
+              error={!!error}
+              helperText={error || `${logName.length}/25 caracteres`}
+              fullWidth
+              autoFocus
+              sx={{ flexGrow: 1 }}
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                height: '56px',
+                px: 3,
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.dark,
+                },
+              }}
+            >
+              Crear Log
+            </Button>
+          </Box>
         </Box>
       </DialogContent>
 
-      <Divider sx={{ my: 2 }} />
+      <Divider sx={{ my: 0 }} />
       <DialogActions sx={{ px: 3, py: 2 }}>
         <Button
           onClick={onClose}

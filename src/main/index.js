@@ -255,5 +255,42 @@ app.on('window-all-closed', () => {
   }
 });
 
+// IPC Handlers
+ipcMain.handle('create-log', async (event, { name, settings = {} }) => {
+  try {
+    const logsDir = path.join(app.getPath('userData'), 'Logs');
+    await fs.mkdir(logsDir, { recursive: true });
+
+    // Clean and validate the log name
+    const cleanName = name.trim();
+    if (!cleanName) {
+      throw new Error('El nombre del log no puede estar vacío');
+    }
+
+    // Create a safe filename (only allow alphanumeric, spaces, and underscores)
+    const safeName = cleanName
+      .replace(/[^\w\s]/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const logFilename = `${safeName}.json`;
+    const logPath = path.join(logsDir, logFilename);
+
+    const timestamp = new Date().toISOString();
+    const logData = {
+      id: timestamp,
+      name: cleanName,
+      createdAt: timestamp,
+      settings,
+      qsos: [],
+    };
+
+    await fs.writeFile(logPath, JSON.stringify(logData, null, 2));
+    return { ...logData, path: logPath };
+  } catch (error) {
+    console.error('Error creating log:', error);
+    throw new Error('Failed to create log');
+  }
+});
+
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
