@@ -189,7 +189,14 @@ export default function LoadLogDialog({ open, onClose, onLoad }) {
                         mb: 0.5,
                       }}
                     >
-                      {new Date(log.createdAt).toLocaleString()}
+                      {`Creado: ${new Date(log.createdAt).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                      })}`}
                     </Typography>
                     <Typography
                       variant="caption"
@@ -199,7 +206,7 @@ export default function LoadLogDialog({ open, onClose, onLoad }) {
                         fontSize: { xs: '0.75rem', sm: '0.8125rem' },
                       }}
                     >
-                      {log.qsos?.length || 0} QSOs registrados
+                      {log.qsos ? log.qsos.length : 0} QSOs registrados
                     </Typography>
                   </Box>
                   <Button
