@@ -17,6 +17,7 @@ import QsoForm from './components/QsoForm';
 import AboutDialog from './components/AboutDialog';
 import SettingsDialog from './components/SettingsDialog';
 import WelcomeDialog from './components/WelcomeDialog';
+import NewLogDialog from './components/NewLogDialog';
 
 const darkTheme = createTheme({
   palette: {
@@ -38,6 +39,7 @@ function App() {
   const [settings, setSettings] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [newLogOpen, setNewLogOpen] = useState(false);
 
   useEffect(() => {
     // Load settings when component mounts
@@ -71,6 +73,8 @@ function App() {
     const handleMenuAction = (_, action) => {
       if (action === 'open-settings') {
         setSettingsOpen(true);
+      } else if (action === 'new-log') {
+        setNewLogOpen(true);
       }
     };
 
@@ -86,6 +90,16 @@ function App() {
       window.electron.ipcRenderer.removeListener('menu-action', handleMenuAction);
     };
   }, []);
+
+  const handleNewLog = (logData) => {
+    // Aquí puedes manejar la creación del nuevo log
+    console.log('Nuevo log creado:', logData);
+    setSnackbar({
+      open: true,
+      message: `Log "${logData.name}" creado correctamente`,
+      severity: 'success',
+    });
+  };
 
   const handleSaveSettings = async (newSettings) => {
     try {
@@ -214,10 +228,18 @@ function App() {
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
               <Paper sx={{ p: 2, mb: 3, position: 'sticky', top: 20 }}>
-                <QsoForm
-                  onSave={handleSaveQso}
-                  qso={currentQso}
-                  onClear={() => setCurrentQso(null)}
+                {settings && (
+                  <QsoForm
+                    onSave={handleSaveQso}
+                    qso={currentQso}
+                    onClear={() => setCurrentQso(null)}
+                  />
+                )}
+                <NewLogDialog
+                  open={newLogOpen}
+                  onClose={() => setNewLogOpen(false)}
+                  onSave={handleNewLog}
+                  settings={settings}
                 />
               </Paper>
             </Grid>
