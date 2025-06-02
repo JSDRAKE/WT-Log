@@ -18,6 +18,7 @@ import AboutDialog from './components/AboutDialog';
 import SettingsDialog from './components/SettingsDialog';
 import WelcomeDialog from './components/WelcomeDialog';
 import NewLogDialog from './components/NewLogDialog';
+import LoadLogDialog from './components/LoadLogDialog';
 
 const darkTheme = createTheme({
   palette: {
@@ -44,6 +45,7 @@ function App() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [newLogOpen, setNewLogOpen] = useState(false);
+  const [loadLogOpen, setLoadLogOpen] = useState(false);
 
   useEffect(() => {
     // Load settings when component mounts
@@ -79,6 +81,8 @@ function App() {
         setSettingsOpen(true);
       } else if (action === 'new-log') {
         setNewLogOpen(true);
+      } else if (action === 'load-log') {
+        setLoadLogOpen(true);
       }
     };
 
@@ -279,6 +283,11 @@ function App() {
                   onSave={handleNewLog}
                   onLoad={handleLoadLog}
                   logs={logs}
+                />
+                <LoadLogDialog
+                  open={loadLogOpen}
+                  onClose={() => setLoadLogOpen(false)}
+                  onLoad={handleLoadLog}
                 />
               </Paper>
             </Grid>
