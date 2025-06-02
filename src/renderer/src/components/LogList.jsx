@@ -70,16 +70,16 @@ export default function LogList({ logs = [], loading = false, error = null }) {
                 </Typography>
               }
               secondary={
-                <>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                   {log.createdAt && (
                     <Typography component="span" variant="caption" color="text.secondary">
-                      Creado: {format(new Date(log.createdAt), 'PPpp', { locale: es })}
+                      {`Creado: ${format(new Date(log.createdAt), 'd MMMM yyyy HH:mm', { locale: es })}`}
                     </Typography>
                   )}
                   <Typography component="span" variant="caption" color="text.secondary">
-                    {log.qsos?.length || 0} QSOs registrados
+                    {log.qsos ? log.qsos.length : 0} QSOs registrados
                   </Typography>
-                </>
+                </Box>
               }
               secondaryTypographyProps={{ component: 'div' }}
             />
