@@ -35,6 +35,7 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
       ituZone: '',
       name: '',
       city: '',
+      theme: 'dark', // Valor por defecto: tema oscuro
     }),
     []
   );
@@ -639,6 +640,34 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
                 },
               }}
             />
+          </Box>
+
+          {/* Quinta línea: Selector de tema */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+            <FormControl fullWidth margin="dense">
+              <InputLabel id="theme-select-label">Tema</InputLabel>
+              <Select
+                labelId="theme-select-label"
+                id="theme-select"
+                value={settings.theme || 'dark'}
+                label="Tema"
+                onChange={handleChange}
+                name="theme"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': {
+                      borderColor: theme.palette.primary.light,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: theme.palette.primary.main,
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="light">Claro</MenuItem>
+                <MenuItem value="dark">Oscuro</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
         </Box>
       </DialogContent>
