@@ -4,19 +4,23 @@ import {
   Dialog,
   DialogContent,
   DialogActions,
-  Button,
   TextField,
-  Box,
-  MenuItem,
-  InputLabel,
-  FormControl,
-  Select,
+  Button,
   Typography,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Divider,
-  useTheme,
   IconButton,
+  useTheme,
+  Tabs,
+  Tab,
+  Grid,
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import CloseIcon from '@mui/icons-material/Close';
+import { getCredentials, saveCredentials } from '../utils/secureStorage';
 
 // Import country data from external file
 import { countryData } from '../data/countries';
@@ -25,41 +29,63 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [showItuZoneSelector, setShowItuZoneSelector] = useState(false);
   const [isItuFocused, setIsItuFocused] = useState(false);
-  const defaultSettings = useMemo(
-    () => ({
-      callsign: '',
-      operatorName: '',
-      gridSquare: '',
-      country: '',
-      cqZone: '',
-      ituZone: '',
-      name: '',
-      city: '',
-      theme: 'dark', // Valor por defecto: tema oscuro
-    }),
-    []
-  );
+  const [settings, setSettings] = useState({
+    callsign: '',
+    operatorName: '',
+    gridSquare: '',
+    country: '',
+    cqZone: '',
+    ituZone: '',
+    name: '',
+    city: '',
+    theme: 'dark',
+  });
 
-  const [initialSettings, setInitialSettings] = useState({ ...defaultSettings });
-  const [settings, setSettings] = useState({ ...defaultSettings });
+  // Estado para las credenciales seguras
+  const [credentials, setCredentials] = useState({
+    qrz: { username: '', password: '' },
+    hamqth: { username: '', password: '' },
+  });
+
+  const [activeTab, setActiveTab] = useState(0);
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  // Estado para el manejo de errores
   const [errors, setErrors] = useState({});
 
-  // Update settings when dialog opens or initialData changes
+  // Load initial data and credentials
   useEffect(() => {
-    if (open) {
-      setErrors({});
-      const newSettings = initialData
-        ? {
-            ...defaultSettings,
-            ...initialData,
-            city: initialData.qth || initialData.city || '',
-            gridSquare: initialData.locator || initialData.gridSquare || '',
-          }
-        : { ...defaultSettings };
-      setInitialSettings(newSettings);
-      setSettings(newSettings);
-    }
-  }, [open, initialData, defaultSettings]);
+    const loadData = async () => {
+      if (initialData) {
+        const { qth, locator, ...rest } = initialData;
+        setSettings({
+          ...rest,
+          city: qth || '',
+          gridSquare: locator || '',
+        });
+      }
+
+      // Cargar credenciales seguras
+      try {
+        const [qrzCreds, hamQthCreds] = await Promise.all([
+          getCredentials('qrz'),
+          getCredentials('hamqth'),
+        ]);
+
+        setCredentials({
+          qrz: qrzCreds || { username: '', password: '' },
+          hamqth: hamQthCreds || { username: '', password: '' },
+        });
+      } catch (error) {
+        console.error('Error al cargar credenciales:', error);
+      }
+    };
+
+    loadData();
+  }, [initialData]);
 
   const validateField = (name, value) => {
     // Skip validation for empty fields except required ones
@@ -104,30 +130,20 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
   };
 
   const handleCancel = () => {
-    // Reset to initial settings when canceling
-    setSettings({ ...initialSettings });
+    // Reset to initial data when canceling
+    if (initialData) {
+      const { qth, locator, ...rest } = initialData;
+      setSettings({
+        ...rest,
+        city: qth || '',
+        gridSquare: locator || '',
+      });
+    }
     setErrors({});
     onClose();
   };
 
-  const handleCountryChange = (e) => {
-    const countryName = e.target.value;
-    const country = countryData.find((c) => c.name === countryName);
-    // Update the selected country and reset ITU zone selector
-    setSelectedCountry(country);
-    setShowItuZoneSelector(false);
-    setIsItuFocused(false);
-
-    // Create a new settings object with the updated country and zones
-    const newSettings = {
-      ...settings,
-      country: countryName,
-      cqZone: country?.cq || '',
-      ituZone: country?.itu || '',
-    };
-    // Update the settings state
-    setSettings(newSettings);
-  };
+  // La función handleCountryChange ha sido integrada en handleChange
 
   const handleItuZoneSelect = (e) => {
     const newValue = e.target.value;
@@ -162,45 +178,32 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
     setIsItuFocused(false);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
-    // Field-specific validation and transformation
-    if (name === 'callsign' || name === 'operatorName') {
-      // Only allow letters, numbers, and forward slashes
-      if (!/^[A-Z0-9/]*$/i.test(value)) {
-        return; // Don't update the field if invalid character is entered
-      }
-
-      // Convert to uppercase for callsign and operatorName
-      setSettings((prev) => ({
-        ...prev,
-        [name]: value.toUpperCase(),
-      }));
-    } else if (name === 'country') {
-      // Handle country change separately
-      handleCountryChange(e);
-      return; // Skip further processing as handleCountryChange updates the state
-    } else if (name === 'gridSquare') {
-      // Allow only letters and numbers, convert to uppercase, limit to 6 chars
-      const newValue = value
-        .replace(/[^a-zA-Z0-9]/g, '')
-        .toUpperCase()
-        .slice(0, 6);
-      setSettings((prev) => ({
-        ...prev,
-        [name]: newValue,
-      }));
-    } else if (name === 'cqZone' || name === 'ituZone') {
-      // Allow only numbers, limit to 2 digits
-      const newValue = value.replace(/\D/g, '').slice(0, 2);
-      // Only update if we have exactly 0 or 2 digits
-      if (newValue.length === 0 || newValue.length === 2) {
+    // Handle special cases for country selection
+    if (name === 'country') {
+      const selectedCountry = countryData.find((c) => c.name === value);
+      if (selectedCountry) {
         setSettings((prev) => ({
           ...prev,
-          [name]: newValue,
+          country: value,
+          cqZone: selectedCountry.cqZone || '',
+          ituZone: selectedCountry.ituZones?.[0]?.value || '',
         }));
+        return;
       }
+    } else if (name.startsWith('qrz') || name.startsWith('hamqth')) {
+      // Manejar cambios en las credenciales seguras
+      const [service, field] = name.split('_');
+      setCredentials((prev) => ({
+        ...prev,
+        [service]: {
+          ...prev[service],
+          [field]: value,
+        },
+      }));
+      return;
     } else {
       // For all other fields, update as is
       setSettings((prev) => ({
@@ -252,23 +255,35 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
     return isValid;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const isValid = validate();
     console.log('Form submission - isValid:', isValid);
     console.log('Current settings:', settings);
     console.log('Current errors:', errors);
 
     if (isValid) {
-      // Create a new settings object with the correct field names
-      const { city, gridSquare, ...rest } = settings;
-      const settingsToSave = {
-        ...rest,
-        qth: city,
-        locator: gridSquare,
-      };
-      console.log('Saving settings:', settingsToSave);
-      onSave(settingsToSave);
-      onClose();
+      try {
+        // Guardar credenciales de forma segura
+        await Promise.all([
+          saveCredentials('qrz', credentials.qrz),
+          saveCredentials('hamqth', credentials.hamqth),
+        ]);
+
+        // Create a new settings object with the correct field names
+        const { city, gridSquare, ...rest } = settings;
+        const settingsToSave = {
+          ...rest,
+          qth: city,
+          locator: gridSquare,
+        };
+
+        console.log('Saving settings:', settingsToSave);
+        onSave(settingsToSave);
+        onClose();
+      } catch (error) {
+        console.error('Error al guardar las credenciales:', error);
+        // Aquí podrías mostrar un mensaje de error al usuario
+      }
     } else {
       console.warn('Form validation failed');
     }
@@ -353,322 +368,477 @@ const SettingsDialog = ({ open, onClose, onSave, initialData }) => {
         </IconButton>
       </Box>
       <Divider />
-      <DialogContent sx={{ p: 3 }}>
-        <Box
-          sx={{
-            mb: 3,
-            '& .MuiFormLabel-root.Mui-focused': {
-              color: theme.palette.primary.main,
-            },
-          }}
-        >
-          {/* Primera línea: Estación - Operador */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <TextField
-              label="Estación"
-              name="callsign"
-              value={settings.callsign}
-              onChange={handleChange}
-              inputProps={{
-                maxLength: 15,
-                pattern: '[A-Za-z0-9/]*',
-                style: { textTransform: 'uppercase' },
-              }}
-              fullWidth
-              required
-              error={!!errors.callsign}
-              helperText={errors.callsign}
-              margin="dense"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: theme.palette.primary.light,
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: theme.palette.primary.main,
-                  },
+      <DialogContent sx={{ p: 0 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            aria-label="settings tabs"
+            sx={{
+              '& .MuiTabs-indicator': {
+                backgroundColor: theme.palette.primary.main,
+                height: 3,
+              },
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 500,
+                minWidth: 120,
+                '&.Mui-selected': {
+                  color: theme.palette.primary.main,
                 },
-              }}
-            />
-            <TextField
-              label="Operador"
-              name="operatorName"
-              value={settings.operatorName}
-              onChange={handleChange}
-              inputProps={{
-                maxLength: 15,
-                pattern: '[A-Za-z0-9/]*',
-                style: { textTransform: 'uppercase' },
-              }}
-              fullWidth
-              required
-              error={!!errors.operatorName}
-              helperText={errors.operatorName}
-              margin="dense"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: theme.palette.primary.light,
+              },
+            }}
+          >
+            <Tab label="General" />
+            <Tab label="Servicios en Línea" />
+          </Tabs>
+        </Box>
+        <Box sx={{ p: 3 }}>
+          {activeTab === 0 ? (
+            <Box>
+              <Box
+                sx={{
+                  mb: 3,
+                  '& .MuiFormLabel-root.Mui-focused': {
+                    color: theme.palette.primary.main,
                   },
-                  '&.Mui-focused fieldset': {
-                    borderColor: theme.palette.primary.main,
-                  },
-                },
-              }}
-            />
-          </Box>
-
-          {/* Segunda línea: Nombre - Ciudad */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <TextField
-              label="Nombre"
-              name="name"
-              value={settings.name || ''}
-              onChange={handleChange}
-              fullWidth
-              margin="dense"
-            />
-            <TextField
-              label="Ciudad"
-              name="city"
-              value={settings.city || ''}
-              onChange={handleChange}
-              fullWidth
-              margin="dense"
-            />
-          </Box>
-
-          {/* Tercera línea: País, CQ, ITU */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <FormControl
-              fullWidth
-              margin="dense"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: theme.palette.primary.light,
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: theme.palette.primary.main,
-                  },
-                },
-              }}
-            >
-              <InputLabel id="country-select-label">País</InputLabel>
-              <Select
-                labelId="country-select-label"
-                id="country-select"
-                value={settings.country}
-                label="País"
-                onChange={handleChange}
-                name="country"
-                displayEmpty
-                renderValue={(selected) => {
-                  if (!selected) {
-                    return <em>Selecciona un país</em>;
-                  }
-                  return selected;
                 }}
               >
-                <MenuItem disabled value="">
-                  <em>Selecciona un país</em>
-                </MenuItem>
-                {countryData.map((country) => (
-                  <MenuItem key={country.name} value={country.name}>
-                    {country.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                {/* Primera línea: Estación - Operador */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <TextField
+                    label="Estación"
+                    name="callsign"
+                    value={settings.callsign}
+                    onChange={handleChange}
+                    inputProps={{
+                      maxLength: 15,
+                      pattern: '[A-Za-z0-9/]*',
+                      style: { textTransform: 'uppercase' },
+                    }}
+                    fullWidth
+                    required
+                    error={!!errors.callsign}
+                    helperText={errors.callsign}
+                    margin="dense"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': {
+                          borderColor: theme.palette.primary.light,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: theme.palette.primary.main,
+                        },
+                      },
+                    }}
+                  />
+                  <TextField
+                    label="Operador"
+                    name="operatorName"
+                    value={settings.operatorName}
+                    onChange={handleChange}
+                    inputProps={{
+                      maxLength: 15,
+                      pattern: '[A-Za-z0-9/]*',
+                      style: { textTransform: 'uppercase' },
+                    }}
+                    fullWidth
+                    required
+                    error={!!errors.operatorName}
+                    helperText={errors.operatorName}
+                    margin="dense"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': {
+                          borderColor: theme.palette.primary.light,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: theme.palette.primary.main,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
 
-            <TextField
-              label="CQ"
-              name="cqZone"
-              value={settings.cqZone || ''}
-              onChange={handleChange}
-              inputProps={{
-                maxLength: 2,
-                inputMode: 'numeric',
-                pattern: '\\d{2}',
-                placeholder: '00',
-                style: {
-                  textAlign: 'center',
-                  fontSize: '1.1rem',
-                  letterSpacing: '0.2em',
-                  width: '100%',
-                },
-              }}
-              margin="dense"
-              error={!!errors.cqZone}
-              helperText={errors.cqZone}
-              sx={{
-                minWidth: '80px',
-                '& .MuiInputBase-root': {
-                  height: '56px',
-                },
-                '& .MuiInputBase-input': {
-                  textAlign: 'center',
-                  padding: '8.5px 12px',
-                  backgroundColor: settings.country ? 'rgba(0, 0, 0, 0.04)' : 'inherit',
-                },
-              }}
-              InputProps={{
-                readOnly: !!settings.country,
-              }}
-            />
+                {/* Segunda línea: Nombre - Ciudad */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <TextField
+                    label="Nombre"
+                    name="name"
+                    value={settings.name || ''}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="dense"
+                  />
+                  <TextField
+                    label="Ciudad"
+                    name="city"
+                    value={settings.city || ''}
+                    onChange={handleChange}
+                    fullWidth
+                    margin="dense"
+                  />
+                </Box>
 
-            <Box sx={{ position: 'relative', minWidth: '80px' }}>
-              <TextField
-                label="ITU"
-                name="ituZone"
-                value={settings.ituZone || ''}
-                onChange={handleChange}
-                onFocus={handleItuFocus}
-                onBlur={handleItuBlur}
-                inputProps={{
-                  maxLength: 2,
-                  inputMode: 'numeric',
-                  pattern: '\\d{2}',
-                  placeholder: '00',
-                  style: {
-                    textAlign: 'center',
-                    fontSize: '1.1rem',
-                    letterSpacing: '0.2em',
-                    width: '100%',
-                    cursor: selectedCountry?.ituZones?.length > 1 ? 'pointer' : 'default',
-                  },
-                }}
-                margin="dense"
-                error={!!errors.ituZone}
-                helperText={errors.ituZone}
-                sx={{
-                  width: '100%',
-                  '& .MuiInputBase-root': {
-                    height: '56px',
-                  },
-                  '& .MuiInputBase-input': {
-                    textAlign: 'center',
-                    padding: '8.5px 12px',
-                    backgroundColor: settings.country ? 'rgba(0, 0, 0, 0.04)' : 'inherit',
-                  },
-                }}
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: selectedCountry?.ituZones?.length > 1 && (
-                    <Box
-                      component="span"
-                      sx={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        pointerEvents: 'none',
+                {/* Tercera línea: País, CQ, ITU */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <FormControl
+                    fullWidth
+                    margin="dense"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': {
+                          borderColor: theme.palette.primary.light,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: theme.palette.primary.main,
+                        },
+                      },
+                    }}
+                  >
+                    <InputLabel id="country-select-label">País</InputLabel>
+                    <Select
+                      labelId="country-select-label"
+                      id="country-select"
+                      value={settings.country}
+                      label="País"
+                      onChange={handleChange}
+                      name="country"
+                      displayEmpty
+                      renderValue={(selected) => {
+                        if (!selected) {
+                          return <em>Selecciona un país</em>;
+                        }
+                        return selected;
                       }}
                     >
-                      ▼
-                    </Box>
-                  ),
-                }}
-              />
-              {showItuZoneSelector && isItuFocused && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    zIndex: 1,
-                    backgroundColor: 'background.paper',
-                    boxShadow: 1,
-                    borderRadius: 1,
-                    mt: 0.5,
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                  }}
-                >
-                  {selectedCountry?.ituZones?.map((zone) => (
-                    <Box
-                      key={zone.value}
-                      onClick={() => {
-                        handleItuZoneSelect({ target: { value: zone.value } });
+                      <MenuItem disabled value="">
+                        <em>Selecciona un país</em>
+                      </MenuItem>
+                      {countryData.map((country) => (
+                        <MenuItem key={country.name} value={country.name}>
+                          {country.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <TextField
+                    label="CQ"
+                    name="cqZone"
+                    value={settings.cqZone || ''}
+                    onChange={handleChange}
+                    inputProps={{
+                      maxLength: 2,
+                      inputMode: 'numeric',
+                      pattern: '\\d{2}',
+                      placeholder: '00',
+                      style: {
+                        textAlign: 'center',
+                        fontSize: '1.1rem',
+                        letterSpacing: '0.2em',
+                        width: '100%',
+                      },
+                    }}
+                    margin="dense"
+                    error={!!errors.cqZone}
+                    helperText={errors.cqZone}
+                    sx={{
+                      minWidth: '80px',
+                      '& .MuiInputBase-root': {
+                        height: '56px',
+                      },
+                      '& .MuiInputBase-input': {
+                        textAlign: 'center',
+                        padding: '8.5px 12px',
+                        backgroundColor: settings.country ? 'rgba(0, 0, 0, 0.04)' : 'inherit',
+                      },
+                    }}
+                    InputProps={{
+                      readOnly: !!settings.country,
+                    }}
+                  />
+
+                  <Box sx={{ position: 'relative', minWidth: '80px' }}>
+                    <TextField
+                      label="ITU"
+                      name="ituZone"
+                      value={settings.ituZone || ''}
+                      onChange={handleChange}
+                      onFocus={handleItuFocus}
+                      onBlur={handleItuBlur}
+                      inputProps={{
+                        maxLength: 2,
+                        inputMode: 'numeric',
+                        pattern: '\\d{2}',
+                        placeholder: '00',
+                        style: {
+                          textAlign: 'center',
+                          fontSize: '1.1rem',
+                          letterSpacing: '0.2em',
+                          width: '100%',
+                          cursor: selectedCountry?.ituZones?.length > 1 ? 'pointer' : 'default',
+                        },
                       }}
+                      margin="dense"
+                      error={!!errors.ituZone}
+                      helperText={errors.ituZone}
                       sx={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
+                        width: '100%',
+                        '& .MuiInputBase-root': {
+                          height: '56px',
+                        },
+                        '& .MuiInputBase-input': {
+                          textAlign: 'center',
+                          padding: '8.5px 12px',
+                          backgroundColor: settings.country ? 'rgba(0, 0, 0, 0.04)' : 'inherit',
+                        },
+                      }}
+                      InputProps={{
+                        readOnly: true,
+                        endAdornment: selectedCountry?.ituZones?.length > 1 && (
+                          <Box
+                            component="span"
+                            sx={{
+                              position: 'absolute',
+                              right: '8px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              pointerEvents: 'none',
+                            }}
+                          >
+                            ▼
+                          </Box>
+                        ),
+                      }}
+                    />
+                    {showItuZoneSelector && isItuFocused && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          zIndex: 1,
+                          backgroundColor: 'background.paper',
+                          boxShadow: 1,
+                          borderRadius: 1,
+                          mt: 0.5,
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                        }}
+                      >
+                        {selectedCountry?.ituZones?.map((zone) => (
+                          <Box
+                            key={zone.value}
+                            onClick={() => {
+                              handleItuZoneSelect({ target: { value: zone.value } });
+                            }}
+                            sx={{
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                backgroundColor: 'action.hover',
+                              },
+                            }}
+                          >
+                            {zone.value}
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+
+                {/* Cuarta línea: Grid Locator */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <TextField
+                    label="Grid Locator"
+                    name="gridSquare"
+                    value={settings.gridSquare || ''}
+                    onChange={handleChange}
+                    inputProps={{
+                      maxLength: 6,
+                      placeholder: 'AA00aa',
+                      style: {
+                        textTransform: 'uppercase',
+                        textAlign: 'center',
+                        fontFamily: 'monospace',
+                        letterSpacing: '0.1em',
+                        fontSize: '1.1rem',
+                        width: '100%',
+                      },
+                    }}
+                    margin="dense"
+                    error={!!errors.gridSquare}
+                    helperText={errors.gridSquare}
+                    sx={{
+                      minWidth: '140px',
+                      '& .MuiInputBase-root': {
+                        height: '56px',
+                      },
+                      '& .MuiInputBase-input': {
+                        padding: '8.5px 12px',
+                      },
+                    }}
+                  />
+                </Box>
+
+                {/* Quinta línea: Selector de tema */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+                  <FormControl fullWidth margin="dense">
+                    <InputLabel id="theme-select-label">Tema</InputLabel>
+                    <Select
+                      labelId="theme-select-label"
+                      id="theme-select"
+                      value={settings.theme || 'dark'}
+                      label="Tema"
+                      onChange={handleChange}
+                      name="theme"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': {
+                            borderColor: theme.palette.primary.light,
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: theme.palette.primary.main,
+                          },
                         },
                       }}
                     >
-                      {zone.value}
-                    </Box>
-                  ))}
+                      <MenuItem value="light">Claro</MenuItem>
+                      <MenuItem value="dark">Oscuro</MenuItem>
+                    </Select>
+                  </FormControl>
                 </Box>
-              )}
+              </Box>
             </Box>
-          </Box>
+          ) : (
+            <Box>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ mb: 3, color: theme.palette.text.primary }}
+              >
+                Credenciales de Servicios en Línea
+              </Typography>
 
-          {/* Cuarta línea: Grid Locator */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <TextField
-              label="Grid Locator"
-              name="gridSquare"
-              value={settings.gridSquare || ''}
-              onChange={handleChange}
-              inputProps={{
-                maxLength: 6,
-                placeholder: 'AA00aa',
-                style: {
-                  textTransform: 'uppercase',
-                  textAlign: 'center',
-                  fontFamily: 'monospace',
-                  letterSpacing: '0.1em',
-                  fontSize: '1.1rem',
-                  width: '100%',
-                },
-              }}
-              margin="dense"
-              error={!!errors.gridSquare}
-              helperText={errors.gridSquare}
-              sx={{
-                minWidth: '140px',
-                '& .MuiInputBase-root': {
-                  height: '56px',
-                },
-                '& .MuiInputBase-input': {
-                  padding: '8.5px 12px',
-                },
-              }}
-            />
-          </Box>
-
-          {/* Quinta línea: Selector de tema */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
-            <FormControl fullWidth margin="dense">
-              <InputLabel id="theme-select-label">Tema</InputLabel>
-              <Select
-                labelId="theme-select-label"
-                id="theme-select"
-                value={settings.theme || 'dark'}
-                label="Tema"
-                onChange={handleChange}
-                name="theme"
+              {/* QRZ.com Section */}
+              <Box
                 sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '&:hover fieldset': {
-                      borderColor: theme.palette.primary.light,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: theme.palette.primary.main,
-                    },
-                  },
+                  mb: 4,
+                  p: 2,
+                  bgcolor: 'background.paper',
+                  borderRadius: 1,
+                  border: `1px solid ${theme.palette.divider}`,
                 }}
               >
-                <MenuItem value="light">Claro</MenuItem>
-                <MenuItem value="dark">Oscuro</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: theme.palette.primary.main,
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src="https://www.qrz.com/favicon.ico"
+                    alt="QRZ"
+                    sx={{ width: 20, height: 20, mr: 1 }}
+                  />
+                  QRZ.com
+                </Typography>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Usuario QRZ"
+                      name="qrz_username"
+                      value={credentials.qrz?.username || ''}
+                      onChange={handleChange}
+                      margin="normal"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Contraseña QRZ"
+                      name="qrz_password"
+                      type="password"
+                      value={credentials.qrz?.password || ''}
+                      onChange={handleChange}
+                      margin="normal"
+                      size="small"
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* HamQTH Section */}
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: 'background.paper',
+                  borderRadius: 1,
+                  border: `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: theme.palette.secondary.main,
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src="https://www.hamqth.com/favicon.ico"
+                    alt="HamQTH"
+                    sx={{ width: 20, height: 20, mr: 1 }}
+                  />
+                  HamQTH
+                </Typography>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Usuario HamQTH"
+                      name="hamqth_username"
+                      value={credentials.hamqth?.username || ''}
+                      onChange={handleChange}
+                      margin="normal"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Contraseña HamQTH"
+                      name="hamqth_password"
+                      type="password"
+                      value={credentials.hamqth?.password || ''}
+                      onChange={handleChange}
+                      margin="normal"
+                      size="small"
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Box sx={{ mt: 3, textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  Las credenciales se almacenan de forma segura en tu dispositivo local.
+                </Typography>
+              </Box>
+            </Box>
+          )}
         </Box>
       </DialogContent>
       <Divider />
