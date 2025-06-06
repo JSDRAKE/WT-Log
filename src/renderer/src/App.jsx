@@ -21,24 +21,102 @@ import NewLogDialog from './components/NewLogDialog';
 import LoadLogDialog from './components/LoadLogDialog';
 import DeleteLogDialog from './components/DeleteLogDialog';
 
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#1976d2',
+const getTheme = (mode) =>
+  createTheme({
+    palette: {
+      mode,
+      primary: {
+        main: '#1976d2',
+        light: '#63a4ff',
+        dark: '#004ba0',
+        contrastText: '#ffffff',
+      },
+      secondary: {
+        main: '#dc004e',
+        light: '#ff5c8d',
+        dark: '#a3003a',
+        contrastText: '#ffffff',
+      },
+      background: {
+        default: mode === 'dark' ? '#121212' : '#f8f9fa',
+        paper: mode === 'dark' ? '#1e1e1e' : '#ffffff',
+      },
+      text: {
+        primary: mode === 'dark' ? '#ffffff' : 'rgba(0, 0, 0, 0.87)',
+        secondary: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+        disabled: mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.38)',
+      },
+      divider: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
     },
-    secondary: {
-      main: '#dc004e',
+    components: {
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            background: mode === 'dark' ? '#1e1e1e' : '#1976d2',
+            color: '#ffffff',
+            boxShadow:
+              mode === 'dark'
+                ? '0px 2px 4px -1px rgba(0,0,0,0.2), ' +
+                  '0px 4px 5px 0px rgba(0,0,0,0.14), ' +
+                  '0px 1px 10px 0px rgba(0,0,0,0.12)'
+                : '0 2px 4px rgba(0,0,0,0.1)',
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+            backgroundColor: mode === 'dark' ? '#1e1e1e' : '#ffffff',
+            border:
+              mode === 'dark'
+                ? '1px solid rgba(255, 255, 255, 0.12)'
+                : '1px solid rgba(0, 0, 0, 0.12)',
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            textTransform: 'none',
+            fontWeight: 500,
+            borderRadius: 4,
+          },
+          contained: {
+            boxShadow: mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.5)' : '0 1px 2px rgba(0,0,0,0.1)',
+            '&:hover': {
+              boxShadow:
+                mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.7)' : '0 2px 4px rgba(0,0,0,0.2)',
+            },
+          },
+        },
+      },
     },
-  },
-});
+    shape: {
+      borderRadius: 8,
+    },
+    typography: {
+      fontFamily: [
+        '-apple-system',
+        'BlinkMacSystemFont',
+        '"Segoe UI"',
+        'Roboto',
+        '"Helvetica Neue"',
+        'Arial',
+        'sans-serif',
+        '"Apple Color Emoji"',
+        '"Segoe UI Emoji"',
+        '"Segoe UI Symbol"',
+      ].join(','),
+    },
+  });
 
 function App() {
   const [qsos, setQsos] = useState([]);
   const [currentQso, setCurrentQso] = useState(null);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState({ theme: 'dark' });
   const [currentLog, setCurrentLog] = useState(null);
   // Keep logs state for future use when we implement log listing in the main UI
   // eslint-disable-next-line no-unused-vars
@@ -207,7 +285,10 @@ function App() {
   const handleSaveSettings = async (newSettings) => {
     try {
       await window.electron.ipcRenderer.invoke('save-settings', newSettings);
-      setSettings(newSettings);
+      setSettings((prevSettings) => ({
+        ...prevSettings,
+        ...newSettings,
+      }));
       setSnackbar({
         open: true,
         message: 'Configuración guardada correctamente',
@@ -250,8 +331,11 @@ function App() {
     }
   };
 
+  // Get current theme based on settings
+  const currentTheme = getTheme(settings?.theme || 'dark');
+
   return (
-    <ThemeProvider theme={darkTheme}>
+    <ThemeProvider theme={currentTheme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         {/* Title bar for the window */}
